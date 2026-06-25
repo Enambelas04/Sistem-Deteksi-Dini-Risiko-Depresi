@@ -1,0 +1,41 @@
+services:
+  libretranslate:
+    image: libretranslate/libretranslate:latest
+    container_name: aurelia-libretranslate-dev
+    ports:
+      - "5050:5000"
+    environment:
+      - LT_LOAD_ONLY=en,id
+    volumes:
+      - libretranslate-models:/home/libretranslate/.local
+
+  backend:
+    build:
+      context: ./backend
+    container_name: aurelia-backend-dev
+    command: python app.py
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    depends_on:
+      - libretranslate
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: aurelia-frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./src:/app/src
+      - ./index.html:/app/index.html
+    depends_on:
+      - backend
+
+volumes:
+  libretranslate-models:

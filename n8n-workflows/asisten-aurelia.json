@@ -1,0 +1,188 @@
+{
+  "name": "Asisten Aurelia - Chatbot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "asisten-aurelia",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Masuk",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 400],
+      "webhookId": "asisten-aurelia"
+    },
+    {
+      "parameters": {
+        "url": "=http://backend:5000/ringkasan",
+        "options": {}
+      },
+      "id": "get-ringkasan",
+      "name": "Ambil Ringkasan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 260]
+    },
+    {
+      "parameters": {
+        "url": "=http://backend:5000/performa-model",
+        "options": {}
+      },
+      "id": "get-performa",
+      "name": "Ambil Performa Model",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 400]
+    },
+    {
+      "parameters": {
+        "url": "=http://backend:5000/cuitan",
+        "options": {}
+      },
+      "id": "get-cuitan",
+      "name": "Ambil Daftar Cuitan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 540]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://libretranslate:5000/translate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "q", "value": "={{ $json.teks }}" },
+            { "name": "source", "value": "en" },
+            { "name": "target", "value": "id" },
+            { "name": "format", "value": "text" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "translate-cuitan",
+      "name": "Terjemahkan ke Indonesia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 540],
+      "notes": "Memanggil LibreTranslate self-hosted (lihat service 'libretranslate' di docker-compose.yml) - open source, tidak butuh API key berbayar. Hasil ada di field translatedText."
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ { ...$('Ambil Daftar Cuitan').item.json, teksIndonesia: $json.translatedText } }}",
+        "options": {}
+      },
+      "id": "set-teks-id",
+      "name": "Gabungkan Terjemahan",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1100, 540],
+      "notes": "Menambahkan field teksIndonesia ke setiap cuitan, sambil tetap menyimpan teks asli, skor, dan risiko apa adanya."
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "cuitanTerbaru",
+        "options": {}
+      },
+      "id": "aggregate-cuitan",
+      "name": "Gabungkan Kembali Jadi Daftar",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1300, 540],
+      "notes": "Menyatukan semua cuitan yang sudah diberi teksIndonesia kembali jadi satu array."
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ {\n  \"pesan_pengguna\": $('Webhook Masuk').first().json.body.pesan,\n  \"konteks\": {\n    \"ringkasan\": $('Ambil Ringkasan').first().json,\n    \"performaModel\": $('Ambil Performa Model').first().json,\n    \"cuitanTerbaru\": $json.cuitanTerbaru\n  }\n} }}",
+        "options": {}
+      },
+      "id": "susun-konteks",
+      "name": "Susun Konteks",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1700, 400],
+      "notes": "konteks.cuitanTerbaru sekarang berisi field teks (Inggris asli, dasar skor) dan teksIndonesia (terjemahan untuk ditampilkan/dijawabkan)."
+    },
+    {
+      "parameters": {
+        "jsCode": "const pesan = ($json.pesan_pengguna || '').toLowerCase();\nconst konteks = $json.konteks;\nlet balasan;\n\nif (pesan.includes('risiko tinggi') || pesan.includes('kasus tinggi')) {\n  const jumlah = (konteks.cuitanTerbaru || []).filter(c => c.risiko === 'tinggi').length;\n  balasan = `Saat ini ada ${jumlah} cuitan contoh dengan klasifikasi risiko tinggi dari model XGBoost. Total keseluruhan (data ringkasan) tercatat ${konteks.ringkasan.risikoTinggi} kasus risiko tinggi dalam 14 hari terakhir.`;\n} else if (pesan.includes('akurasi') || pesan.includes('performa') || pesan.includes('model terbaik')) {\n  const terbaik = konteks.performaModel.reduce((a, b) => (b.akurasi > a.akurasi ? b : a));\n  balasan = `Dari model yang dibandingkan, ${terbaik.model} mencatat akurasi ${(terbaik.akurasi * 100).toFixed(1)}% dan F1-score ${(terbaik.f1 * 100).toFixed(1)}% pada data uji.`;\n} else if (pesan.includes('tren') || pesan.includes('minggu') || pesan.includes('hari')) {\n  balasan = `Total ${konteks.ringkasan.totalCuitanDianalisis.toLocaleString('id-ID')} cuitan telah dianalisis dalam 14 hari terakhir, dengan ${konteks.ringkasan.risikoSedang} kasus risiko sedang dan ${konteks.ringkasan.risikoTinggi} kasus risiko tinggi.`;\n} else if (pesan.includes('halo') || pesan.includes('hai') || pesan.includes('selamat')) {\n  balasan = 'Halo! Saya asisten Aurelia. Tanyakan soal jumlah kasus risiko tinggi, performa model, atau tren minggu ini, ya.';\n} else {\n  balasan = 'Saya bisa membantu menjawab soal jumlah kasus risiko tinggi, performa model, atau tren mingguan. Coba tanyakan salah satu topik itu, ya.';\n}\n\nreturn [{ json: { balasan, sumber: 'n8n-rule-based' } }];"
+      },
+      "id": "panggil-llm",
+      "name": "Susun Balasan (Tanpa LLM)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1940, 400],
+      "notes": "Versi tanpa LLM - logika rule-based berbasis kata kunci, mirip _logika_chatbot_simulasi() di Flask. Tidak butuh API key apa pun."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"balasan\": $json.balasan, \"sumber\": $json.sumber } }}",
+        "options": {}
+      },
+      "id": "respon-webhook",
+      "name": "Kirim Balasan",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [2180, 400]
+    },
+    {
+      "parameters": {
+        "content": "## Alur Workflow\n1. Webhook menerima { pesan } dari backend Flask\n2. HTTP Request mengambil ringkasan, performa model, dan daftar cuitan dari backend (array otomatis terpecah jadi item per cuitan oleh n8n)\n3. Setiap cuitan diterjemahkan ke Indonesia (LibreTranslate) - teks Inggris asli & skor/risiko TETAP dipakai, hanya ditambah field teksIndonesia\n4. Semua cuitan yang sudah diterjemahkan digabung lagi jadi satu array\n5. Susun balasan (rule-based, tanpa LLM)\n6. Hasil dikirim balik sebagai { balasan }\n\n**Penting:** terjemahan HANYA untuk tampilan. Skor risiko dihitung backend dari teks Inggris asli SEBELUM diterjemahkan, supaya cocok dengan vocabulary model yang sudah dilatih.\n\n**Catatan:** URL backend/libretranslate memakai nama service docker-compose (backend, libretranslate) karena n8n sekarang ikut berjalan di network compose yang sama (lihat service 'n8n' di docker-compose.yml).",
+        "height": 280,
+        "width": 360
+      },
+      "id": "catatan-alur",
+      "name": "Catatan",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 640]
+    }
+  ],
+  "connections": {
+    "Webhook Masuk": {
+      "main": [
+        [
+          { "node": "Ambil Ringkasan", "type": "main", "index": 0 },
+          { "node": "Ambil Performa Model", "type": "main", "index": 0 },
+          { "node": "Ambil Daftar Cuitan", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Ambil Daftar Cuitan": {
+      "main": [[{ "node": "Terjemahkan ke Indonesia", "type": "main", "index": 0 }]]
+    },
+    "Terjemahkan ke Indonesia": {
+      "main": [[{ "node": "Gabungkan Terjemahan", "type": "main", "index": 0 }]]
+    },
+    "Gabungkan Terjemahan": {
+      "main": [[{ "node": "Gabungkan Kembali Jadi Daftar", "type": "main", "index": 0 }]]
+    },
+    "Gabungkan Kembali Jadi Daftar": {
+      "main": [[{ "node": "Susun Konteks", "type": "main", "index": 0 }]]
+    },
+    "Ambil Ringkasan": {
+      "main": [[]]
+    },
+    "Ambil Performa Model": {
+      "main": [[]]
+    },
+    "Susun Konteks": {
+      "main": [[{ "node": "Susun Balasan (Tanpa LLM)", "type": "main", "index": 0 }]]
+    },
+    "Susun Balasan (Tanpa LLM)": {
+      "main": [[{ "node": "Kirim Balasan", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
