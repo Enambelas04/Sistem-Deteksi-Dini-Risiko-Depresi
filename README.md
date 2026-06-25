@@ -88,11 +88,11 @@ Endpoint `/chatbot` di `backend/app.py` memanggil Groq (LLM gratis, API kompatib
 format OpenAI) **langsung dari Flask**, tanpa lewat n8n. Lebih simpel dan tidak
 rentan masalah koneksi antar-container.
 
-**Yang perlu kamu lakukan:**
+**Yang saya lakukan:**
 1. Daftar gratis di console.groq.com/keys, buat API key
 2. Edit `backend/app.py`, ganti baris:
    ```python
-   GROQ_API_KEY = "GANTI_DENGAN_API_KEY_GROQ_KAMU"
+   GROQ_API_KEY = "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"
    ```
 3. Rebuild: `docker compose up --build`
 
