@@ -1,7 +1,5 @@
 // Lapisan koneksi ke backend Flask.
-// Semua halaman memanggil fungsi-fungsi di sini, bukan fetch() langsung,
-// supaya kalau ada perubahan endpoint nanti (misal disambungkan ke n8n),
-// cukup diubah di satu tempat ini saja.
+
 
 const BASE_URL = '/api'
 
