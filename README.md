@@ -82,7 +82,7 @@ python app.py
 Saat menjalankan tanpa Docker, ubah target proxy di `vite.config.js` dari
 `http://backend:5000` menjadi `http://localhost:5000`.
 
-## Chatbot — sekarang langsung pakai Groq (tanpa n8n)
+## Chatbot — sekarang langsung pakai Groq 
 
 Endpoint `/chatbot` di `backend/app.py` memanggil Groq (LLM gratis, API kompatibel
 format OpenAI) **langsung dari Flask**, tanpa lewat n8n. Lebih simpel dan tidak
@@ -99,6 +99,4 @@ rentan masalah koneksi antar-container.
 Kalau Groq gagal dihubungi (key belum diisi, rate limit, dll), chatbot otomatis
 jatuh ke jawaban rule-based (`_logika_chatbot_simulasi`) supaya UI tetap berfungsi.
 
-**Catatan:** service `n8n` di `docker-compose.yml` dan folder `n8n-workflows/`
-masih ada untuk referensi/eksperimen lain, tapi **tidak lagi dipakai** oleh
-fitur chatbot ini.
+*
