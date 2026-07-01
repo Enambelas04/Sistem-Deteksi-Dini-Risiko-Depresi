@@ -87,16 +87,3 @@ Saat menjalankan tanpa Docker, ubah target proxy di `vite.config.js` dari
 Endpoint `/chatbot` di `backend/app.py` memanggil Groq (LLM gratis, API kompatibel
 format OpenAI) **langsung dari Flask**, tanpa lewat n8n. Lebih simpel dan tidak
 rentan masalah koneksi antar-container.
-
-**Yang saya lakukan:**
-1. Daftar gratis di console.groq.com/keys, buat API key
-2. Edit `backend/app.py`, ganti baris:
-   ```python
-   GROQ_API_KEY = "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"
-   ```
-3. Rebuild: `docker compose up --build`
-
-Kalau Groq gagal dihubungi (key belum diisi, rate limit, dll), chatbot otomatis
-jatuh ke jawaban rule-based (`_logika_chatbot_simulasi`) supaya UI tetap berfungsi.
-
-*
