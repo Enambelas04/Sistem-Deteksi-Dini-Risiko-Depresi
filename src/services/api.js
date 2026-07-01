@@ -1,7 +1,9 @@
 // Lapisan koneksi ke backend Flask.
 
 
-const BASE_URL = '/api'
+// Saat development: proxy Vite kirim /api ke backend Flask (lihat vite.config.js).
+// Saat production (Vercel): pakai VITE_API_URL dari env Vercel, fallback ke /api.
+const BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 async function ambil(path) {
   const res = await fetch(`${BASE_URL}${path}`)

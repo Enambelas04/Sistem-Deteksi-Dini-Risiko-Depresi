@@ -1,0 +1,15 @@
+# Abaikan backend — akan di-deploy terpisah
+backend/
+n8n-workflows/
+
+# File development
+Dockerfile
+Dockerfile.dev
+docker-compose.yml
+docker-compose.dev.yml
+.dockerignore
+nginx.conf
+
+# File sistem
+.DS_Store
+*.log

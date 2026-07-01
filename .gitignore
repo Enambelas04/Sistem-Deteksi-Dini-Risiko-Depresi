@@ -1,0 +1,16 @@
+node_modules/
+dist/
+
+.vercel
+
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+backend/data/chatbot.db
+backend/.vercel/
+
+.DS_Store
+*.log

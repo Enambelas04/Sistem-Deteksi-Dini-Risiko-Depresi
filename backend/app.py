@@ -14,6 +14,7 @@ CATATAN PENTING soal dataset saat ini:
 """
 
 import json
+import os
 import re
 import sqlite3
 from pathlib import Path
@@ -282,9 +283,10 @@ def _hitung_xai(teks: str, top_n: int = 6):
     }
 
 
-# Ganti dengan API key Groq kamu (gratis di console.groq.com/keys)
-GROQ_API_KEY = "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"
-GROQ_MODEL = "llama-3.1-8b-instant"
+# API key Groq — pakai env variable di production, fallback untuk development.
+# Daftar gratis di https://console.groq.com/keys
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "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")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant")
 
 
 @app.get("/chatbot/riwayat")
